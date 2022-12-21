@@ -48,16 +48,33 @@ class LibGenAPI:
     def search(
         self,
         req: str,
-        lg_topic: str = 'libgen',
-        open='0',
+        lg_topic: str = 'fiction',
+        open_='0',
         view='simple',
         res=25,
         phrase='1',
         column='def'
     ):
-        pass
+        response = requests.get(self.URL, params={
+            'req': req,
+            'lg_topic': lg_topic,
+            'open': open_,
+            'view': view,
+            'res': res,
+            'phrase': phrase,
+            'column': column
+        })
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content.decode(), 'lxml')
+            table = soup.find('table', {'class': 'catalog'})
+            paginator = soup.find('div', {'class': 'catalog_paginator'})
+            pages = int(
+                soup.find('div', {'style': 'float:left'}).getText().split(' ')[0])
+            rows = table.tbody.findAll('tr')
+            print(pages)
 
 
 if __name__ == '__main__':
     API = LibGenAPI(error_callback)
     print(f"[DEBUG] >> Using {API.URL}")
+    API.search(req="notebook")
