@@ -25,6 +25,11 @@ def error_callback(err):
     quit(1)
 
 
+class Book:
+    def __init__(self, title, author, link) -> None:
+        pass
+
+
 class LibGenAPI:
 
     def __init__(self, error_cb) -> None:
@@ -68,13 +73,23 @@ class LibGenAPI:
             soup = BeautifulSoup(response.content.decode(), 'lxml')
             table = soup.find('table', {'class': 'catalog'})
             paginator = soup.find('div', {'class': 'catalog_paginator'})
-            pages = int(
-                soup.find('div', {'style': 'float:left'}).getText().split(' ')[0])
+            if paginator == None:
+                self.ErrorCallback("No Results Found")
+            count = int(
+                paginator.find('div', {'style': 'float:left'}).getText().split(' ')[0])
             rows = table.tbody.findAll('tr')
-            print(pages)
+            if count > 0:
+                for i, row in enumerate(rows):
+                    a = row.findAll('a')
+                    author = a[0].getText()
+                    title = a[1].getText()
+                    print(f"\n{i+1}.\tTitle: {title}\n\tAuthor: {author}")
+                    # print(a)
+            else:
+                self.ErrorCallback("No Results Found")
 
 
 if __name__ == '__main__':
     API = LibGenAPI(error_callback)
     print(f"[DEBUG] >> Using {API.URL}")
-    API.search(req="notebook")
+    API.search(req=input("Search query >> "))
