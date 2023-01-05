@@ -32,7 +32,7 @@ class Book:
 
 class LibGenAPI:
 
-    def __init__(self, error_cb) -> None:
+    def __init__(self, error_cb: function) -> None:
         self.URL = None
         self.ErrorCallback = error_cb
         self.MIRRORS = ["http://libgen.rs/",
