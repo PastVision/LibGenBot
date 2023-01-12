@@ -10,10 +10,11 @@ def error_callback(err):
 
 
 class LibGenBot:
-    def __init__(self, API: LibGenAPI, error_cb: function) -> None:
+    def __init__(self, API: LibGenAPI, error_cb) -> None:
         self.API = API
         self.ErrorCallback = error_cb
 
 
 if __name__ == '__main__':
     api = LibGenAPI(error_callback)
+    bot = LibGenBot(api, error_callback)
