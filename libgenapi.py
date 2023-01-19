@@ -26,12 +26,17 @@ def error_callback(err):
 
 
 class Book:
-    def __init__(self, title, author, language, format, link) -> None:
+    def __init__(self, title, author, language, extension, size, cover_link, link) -> None:
         self.title = title
         self.author = author
         self.language = language
-        self.format = format
+        self.extension = extension
+        self.size = size
+        self.cover_link = cover_link
         self.link = link
+
+    def __str__(self) -> str:
+        return f"Auth: {self.author}\nTitle: {self.title}\nLang: {self.language}\nFormat: {self.extension}\nSize: {self.size}"
 
 
 class LibGenAPI:
@@ -56,6 +61,20 @@ class LibGenAPI:
         if self.URL == None:
             self.ErrorCallback("LibGen Not Reachable")
 
+    def process_dl_link(self, link: str) -> set:
+        response = requests.get(link, headers=self.HEADER)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content.decode(), 'lxml')
+            dl: list = soup.find(
+                'div', {'id': 'download'}).findAll('a', href=True)
+            dl = [i['href'] for i in dl]
+            cover: str = 'http://library.lol' + \
+                soup.find('img', {'alt': 'cover'})['src']
+            # print(dl)
+            return (dl, cover)
+        else:
+            return None
+
     def search(
         self,
         req: str,
@@ -77,7 +96,7 @@ class LibGenAPI:
         },
             headers=self.HEADER)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.content.decode(), 'html5lib')
+            soup = BeautifulSoup(response.content.decode(), 'lxml')
             table = soup.find('table', {'class': 'catalog'})
             paginator = soup.find('div', {'class': 'catalog_paginator'})
             if paginator == None:
@@ -87,28 +106,40 @@ class LibGenAPI:
             rows = table.tbody.findAll('tr')
             # print(rows[0].findAll('td'))
             if count > 0:
+                results = dict()
                 for row in rows:
                     col = row.findAll('td')
                     auth = col[0].ul.li.getText()
                     title = col[2].p.a.getText().strip()
                     lang = col[3].getText().strip()
                     form, size = col[4].getText().strip().split(' / ')
-                    print(
-                        f"Auth: {auth}\nTitle: {title}\nLang: {lang}\nFormat: {form}\nSize: {size}")
-                # Fetched Data Perfectly
-                # TODO get links, merge duplicates:
-                for i, row in enumerate(rows):
-                    a = row.findAll('a')
-                    author = a[0].getText()
-                    title = a[1].getText()
-                    for x, y in enumerate(a):
-                        break
-                        # print(x, y)
+                    size = size.replace('\xa0', ' ')
+                    link_data = self.process_dl_link(
+                        col[5].findAll('a')[0]['href'])  # TODO CONVERT THIS TO GETLINKS() FOR SEPARATE FILE
+                    if link_data:
+                        dl_link, cover_link = link_data
+                    else:
+                        continue
+                    if results.get(auth+title) == None:
+                        results[auth+title] = {
+                            'title': title,
+                            'author': auth,
+                            'formats': list()
+                        }
+                    results[auth+title]['formats'].append(
+                        {'language': lang, 'dl': dl_link, 'size': size, 'extension': form, 'cover': cover_link})
 
-                        # print(f"\n{i+1}.\tTitle: {title}\n\tAuthor: {author}")
-                        # print(a)
+                    # book = Book(title, auth, formats)
+                    # print(book)
+                    # break  # TODO REMOVE IN PROD
+                # Fetched Data Perfectly
+                print(results)
+                # TODO get links, merge duplicates:
             else:
                 self.ErrorCallback("No Results Found")
+        else:
+            self.ErrorCallback(
+                f"Unable to Connect, Error {response.status_code}.")
 
 
 if __name__ == '__main__':
